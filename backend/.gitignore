@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Secrets - never push this to GitHub
+.env
+
+# Uploaded files (user content should not go into git)
+uploads/images/*
+uploads/documents/*
+uploads/avatars/*
+# ...but keep the empty folders in git
+!uploads/**/.gitkeep
+
+# Logs
+*.log
