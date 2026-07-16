@@ -23,11 +23,40 @@ export const notFound = (req, res, next) => {
 // and the frontend always gets clean JSON back.
 export const errorHandler = (err, req, res, next) => {
   // Use the status code from ApiError, or default to 500 (server error)
-  const statusCode = err.statusCode || 500;
+  let statusCode = err.statusCode || 500;
+  let message = err.message || "Internal Server Error";
+
+  // Mongoose: invalid ObjectId (e.g. GET /api/notes/banana)
+  if (err.name === "CastError") {
+    statusCode = 400;
+    message = `Invalid value for ${err.path}`;
+  }
+
+  // Mongoose: schema validation failed (missing/invalid fields)
+  if (err.name === "ValidationError") {
+    statusCode = 400;
+    message = Object.values(err.errors)
+      .map((e) => e.message)
+      .join(", ");
+  }
+
+  // MongoDB: duplicate unique field (e.g. email already registered)
+  if (err.code === 11000) {
+    statusCode = 400;
+    const field = Object.keys(err.keyValue || {})[0] || "field";
+    message = `That ${field} is already in use`;
+  }
+
+  // Multer: file too large
+  if (err.name === "MulterError") {
+    statusCode = 400;
+    message =
+      err.code === "LIMIT_FILE_SIZE" ? "File is too large" : err.message;
+  }
 
   res.status(statusCode).json({
     success: false,
-    message: err.message || "Internal Server Error",
+    message: message,
     data: null,
     // Show the error stack trace only during development (helps debugging)
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,

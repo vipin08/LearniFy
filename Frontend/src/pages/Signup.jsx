@@ -4,6 +4,9 @@ import { useAuth } from "../context/AuthContext";
 import "../styles/landing.css";
 import "../styles/auth.css";
 
+const EMAIL_REGEX = /^[A-Za-z0-9]+@[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
 function Signup() {
   const { signup, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -24,13 +27,37 @@ function Signup() {
     setLoading(true);
     setError("");
 
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedName || !trimmedEmail || !password) {
+      setError("Name, email and password are required.");
+      setLoading(false);
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setError("Email can only use letters and numbers, with @ as the separator.");
+      setLoading(false);
+      return;
+    }
+
+    if (!STRONG_PASSWORD_REGEX.test(password)) {
+      setError(
+        "Password must be at least 8 characters and include 1 uppercase letter, 1 number, and 1 special character."
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
-      await signup({ name, email, password });
+      await signup({ name: trimmedName, email: trimmedEmail, password });
       navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error(err);
       setError(
         err.response?.data?.message || 
+        err.message ||
         "Failed to create account. Please try again."
       );
     } finally {
@@ -69,10 +96,13 @@ function Signup() {
             <label htmlFor="email">Email</label>
             <input
               id="email"
-              type="email"
+              type="text"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              inputMode="email"
+              pattern="[A-Za-z0-9]+@[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+"
+              title="Use only letters and numbers with @ as the separator"
               required
               disabled={loading}
             />

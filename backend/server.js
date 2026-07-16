@@ -58,7 +58,9 @@ const app = express();
 //    to make requests to this API
 app.use(
   cors({
-    origin: process.env.CLIENT_URL, // only allow our frontend URL
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
     credentials: true, // allow cookies / auth headers
   })
 );

@@ -9,9 +9,17 @@
 
 import ApiError from "../utils/ApiError.js";
 
-// Small helper: checks if an email looks valid (something@something.com)
+const EMAIL_REGEX = /^[A-Za-z0-9]+@[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+// Small helper: checks if an email looks valid and keeps symbols out
 const isValidEmail = (email) => {
-  return /^\S+@\S+\.\S+$/.test(email);
+  return EMAIL_REGEX.test(email);
+};
+
+// Password must be at least 8 characters with uppercase, number, and symbol
+const isStrongPassword = (password) => {
+  return STRONG_PASSWORD_REGEX.test(password);
 };
 
 // ----------------------------------------------
@@ -39,18 +47,35 @@ export const requireFields = (...fields) => {
 // ----------------------------------------------
 export const validateRegister = (req, res, next) => {
   const { name, email, password } = req.body || {};
+  const cleanName = typeof name === "string" ? name.trim() : "";
+  const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const cleanPassword = typeof password === "string" ? password : "";
 
-  if (!name || !email || !password) {
+  if (!cleanName || !cleanEmail || !cleanPassword) {
     return next(new ApiError(400, "Name, email and password are required"));
   }
 
-  if (!isValidEmail(email)) {
-    return next(new ApiError(400, "Please provide a valid email address"));
+  if (!isValidEmail(cleanEmail)) {
+    return next(
+      new ApiError(
+        400,
+        "Email can only use letters and numbers, with @ as the separator"
+      )
+    );
   }
 
-  if (password.length < 6) {
-    return next(new ApiError(400, "Password must be at least 6 characters long"));
+  if (!isStrongPassword(cleanPassword)) {
+    return next(
+      new ApiError(
+        400,
+        "Password must be at least 8 characters and include 1 uppercase letter, 1 number, and 1 special character"
+      )
+    );
   }
+
+  req.body.name = cleanName;
+  req.body.email = cleanEmail;
+  req.body.password = cleanPassword;
 
   next();
 };
@@ -60,14 +85,22 @@ export const validateRegister = (req, res, next) => {
 // ----------------------------------------------
 export const validateLogin = (req, res, next) => {
   const { email, password } = req.body || {};
+  const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
-  if (!email || !password) {
+  if (!cleanEmail || !password) {
     return next(new ApiError(400, "Email and password are required"));
   }
 
-  if (!isValidEmail(email)) {
-    return next(new ApiError(400, "Please provide a valid email address"));
+  if (!isValidEmail(cleanEmail)) {
+    return next(
+      new ApiError(
+        400,
+        "Email can only use letters and numbers, with @ as the separator"
+      )
+    );
   }
+
+  req.body.email = cleanEmail;
 
   next();
 };

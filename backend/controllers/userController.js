@@ -4,11 +4,27 @@
 // Handles the user's profile and settings
 // (used by the Profile page and Settings page in React).
 //
-// All routes here are protected - the user must be logged in.
-// Dummy data for now; MongoDB comes later.
+// All routes here are protected - the user must be logged in,
+// so req.user is always the full user document (loaded by the
+// protect middleware).
 
 import asyncHandler from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/response.js";
+import ApiError from "../utils/ApiError.js";
+import User from "../models/User.js";
+
+const EMAIL_REGEX = /^[A-Za-z0-9]+@[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+// Small helper: the safe, public shape of a user (never the password)
+const publicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar,
+  stars: user.stars,
+  createdAt: user.createdAt,
+});
 
 // ----------------------------------------------
 // @desc    Get the logged-in user's profile
@@ -16,22 +32,9 @@ import { sendSuccess } from "../utils/response.js";
 // @access  Private
 // ----------------------------------------------
 export const getProfile = asyncHandler(async (req, res) => {
-  const dummyProfile = {
-    id: req.user.id,
-    name: "Demo User",
-    email: "demo@example.com",
-    avatar: null,
-    bio: "Learning something new every day!",
-    joinedAt: "2026-01-15T10:00:00.000Z",
-    stats: {
-      topicsLearned: 12,
-      quizzesTaken: 8,
-      notesCreated: 24,
-      currentStreak: 5,
-    },
-  };
-
-  return sendSuccess(res, 200, "Profile fetched successfully", dummyProfile);
+  return sendSuccess(res, 200, "Profile fetched successfully", {
+    user: publicUser(req.user),
+  });
 });
 
 // ----------------------------------------------
@@ -40,18 +43,39 @@ export const getProfile = asyncHandler(async (req, res) => {
 // @access  Private
 // ----------------------------------------------
 export const updateProfile = asyncHandler(async (req, res) => {
-  const { name, bio } = req.body;
+  const { name, email, avatar } = req.body;
+  const cleanName = typeof name === "string" ? name.trim() : "";
+  const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
-  // LATER: update the user document in MongoDB
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
 
-  const updatedProfile = {
-    id: req.user.id,
-    name: name || "Demo User",
-    bio: bio || "",
-    updatedAt: new Date().toISOString(),
-  };
+  // If the email is being changed, make sure no one else already uses it
+  if (cleanEmail && cleanEmail !== user.email) {
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      throw new ApiError(
+        400,
+        "Email can only use letters and numbers, with @ as the separator"
+      );
+    }
 
-  return sendSuccess(res, 200, "Profile updated successfully", updatedProfile);
+    const emailTaken = await User.findOne({ email: cleanEmail });
+    if (emailTaken) {
+      throw new ApiError(400, "Email is already in use");
+    }
+    user.email = cleanEmail;
+  }
+
+  if (cleanName) user.name = cleanName;
+  if (avatar) user.avatar = avatar;
+
+  await user.save();
+
+  return sendSuccess(res, 200, "Profile updated successfully", {
+    user: publicUser(user),
+  });
 });
 
 // ----------------------------------------------
@@ -60,7 +84,28 @@ export const updateProfile = asyncHandler(async (req, res) => {
 // @access  Private
 // ----------------------------------------------
 export const changePassword = asyncHandler(async (req, res) => {
-  // LATER: verify old password hash, save new password hash
+  const { oldPassword, newPassword } = req.body;
+
+  if (!newPassword || !STRONG_PASSWORD_REGEX.test(newPassword)) {
+    throw new ApiError(
+      400,
+      "New password must be at least 8 characters and include 1 uppercase letter, 1 number, and 1 special character"
+    );
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isMatch = await user.comparePassword(oldPassword);
+  if (!isMatch) {
+    throw new ApiError(401, "Old password is incorrect");
+  }
+
+  // The pre-save hook in the User model hashes it automatically
+  user.password = newPassword;
+  await user.save();
 
   return sendSuccess(res, 200, "Password changed successfully", null);
 });
@@ -71,14 +116,15 @@ export const changePassword = asyncHandler(async (req, res) => {
 // @access  Private
 // ----------------------------------------------
 export const getSettings = asyncHandler(async (req, res) => {
-  const dummySettings = {
+  // Settings are not stored in MongoDB yet - defaults for now
+  const defaultSettings = {
     theme: "light",
     emailNotifications: true,
     studyReminders: true,
     language: "en",
   };
 
-  return sendSuccess(res, 200, "Settings fetched successfully", dummySettings);
+  return sendSuccess(res, 200, "Settings fetched successfully", defaultSettings);
 });
 
 // ----------------------------------------------
@@ -102,7 +148,7 @@ export const updateSettings = asyncHandler(async (req, res) => {
 // @access  Private
 // ----------------------------------------------
 export const deleteAccount = asyncHandler(async (req, res) => {
-  // LATER: delete the user and all their data from MongoDB
+  await User.findByIdAndDelete(req.user._id);
 
   return sendSuccess(res, 200, "Account deleted successfully", null);
 });

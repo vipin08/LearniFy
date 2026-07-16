@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+const EMAIL_REGEX = /^[A-Za-z0-9]+@[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -13,15 +16,19 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       lowercase: true,
-      match: [
-        /^\S+@\S+\.\S+$/,
-        "Please add a valid email address",
-      ],
+      match: [EMAIL_REGEX, "Email can only use letters and numbers, with @ as the separator"],
     },
     password: {
       type: String,
       required: [true, "Please add a password"],
-      minlength: 6,
+      minlength: [8, "Password must be at least 8 characters long"],
+      validate: {
+        validator: function (value) {
+          return STRONG_PASSWORD_REGEX.test(value);
+        },
+        message:
+          "Password must include 1 uppercase letter, 1 number, and 1 special character",
+      },
     },
     avatar: {
       type: String,

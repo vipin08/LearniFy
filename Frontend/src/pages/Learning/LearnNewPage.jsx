@@ -45,7 +45,8 @@ function LearnNewPage() {
     try {
       let generated;
       if (youtubeUrl.trim()) {
-        const response = await axios.post("http://localhost:5000/api/transcript", {
+        const baseUrl = import.meta.env.VITE_API_URL || "";
+        const response = await axios.post(`${baseUrl}/api/transcript`, {
           url: youtubeUrl.trim()
         });
 
@@ -75,7 +76,7 @@ function LearnNewPage() {
       clearInterval(interval);
       setLoading(false);
       console.error(err);
-      alert("Error generating learning path. Please make sure your backend server is running on http://localhost:5000");
+      alert("Error generating learning path. Please make sure your backend server is running.");
     }
   }
 

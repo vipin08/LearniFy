@@ -1,7 +1,8 @@
 import axios from "axios";
 import { getItem, setItem, STORAGE_KEYS } from "../utils/storage";
 
-const API_URL = "http://localhost:5000/api/auth";
+const BASE_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = `${BASE_URL}/api/auth`;
 
 // Interceptor to attach JWT token
 axios.interceptors.request.use((config) => {
@@ -50,7 +51,7 @@ export const authService = {
     setItem(STORAGE_KEYS.USER, user);
     
     try {
-      await axios.put("http://localhost:5000/api/users/profile", updates);
+      await axios.put(`${BASE_URL}/api/users/profile`, updates);
     } catch (err) {
       console.error("Backend profile update error:", err);
     }
