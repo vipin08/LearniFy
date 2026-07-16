@@ -5,6 +5,7 @@ import axios from "axios";
 import { learningService } from "../../services/learningService";
 import { CATEGORIES, DIFFICULTIES, LEARNING_STYLES, LEARNING_DEPTHS } from "../../data/mockData";
 import PageHeader from "../../components/common/PageHeader";
+import { API_URL } from "../../config/api";
 
 function LearnNewPage() {
   const navigate = useNavigate();
@@ -45,8 +46,7 @@ function LearnNewPage() {
     try {
       let generated;
       if (youtubeUrl.trim()) {
-        const baseUrl = import.meta.env.VITE_API_URL || "";
-        const response = await axios.post(`${baseUrl}/api/transcript`, {
+        const response = await axios.post(`${API_URL}/api/transcript`, {
           url: youtubeUrl.trim()
         });
 

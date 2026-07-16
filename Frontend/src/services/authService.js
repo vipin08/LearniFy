@@ -1,8 +1,8 @@
 import axios from "axios";
 import { getItem, setItem, STORAGE_KEYS } from "../utils/storage";
+import { API_URL } from "../config/api";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "";
-const API_URL = `${BASE_URL}/api/auth`;
+const AUTH_API_URL = `${API_URL}/api/auth`;
 
 // Interceptor to attach JWT token
 axios.interceptors.request.use((config) => {
@@ -19,7 +19,7 @@ export const authService = {
   },
 
   async login(credentials) {
-    const response = await axios.post(`${API_URL}/login`, credentials);
+    const response = await axios.post(`${AUTH_API_URL}/login`, credentials);
     const { user, token } = response.data.data;
     localStorage.setItem("token", token);
     setItem(STORAGE_KEYS.USER, user);
@@ -27,7 +27,7 @@ export const authService = {
   },
 
   async signup(data) {
-    const response = await axios.post(`${API_URL}/signup`, data);
+    const response = await axios.post(`${AUTH_API_URL}/signup`, data);
     const { user, token } = response.data.data;
     localStorage.setItem("token", token);
     setItem(STORAGE_KEYS.USER, user);
@@ -35,7 +35,7 @@ export const authService = {
   },
 
   async getProfile() {
-    const response = await axios.get(`${API_URL}/profile`);
+    const response = await axios.get(`${AUTH_API_URL}/profile`);
     const { user } = response.data.data;
     setItem(STORAGE_KEYS.USER, user);
     return user;
@@ -51,7 +51,7 @@ export const authService = {
     setItem(STORAGE_KEYS.USER, user);
     
     try {
-      await axios.put(`${BASE_URL}/api/users/profile`, updates);
+      await axios.put(`${API_URL}/api/users/profile`, updates);
     } catch (err) {
       console.error("Backend profile update error:", err);
     }
